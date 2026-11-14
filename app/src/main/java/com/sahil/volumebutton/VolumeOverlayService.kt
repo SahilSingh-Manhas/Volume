@@ -120,15 +120,18 @@ class VolumeOverlayService : Service() {
     private var expanded = false
     private val autoHide = Runnable { setExpanded(false) }
 
-    /** Vertical volume bar: upar swipe = zyada, niche swipe = kam. */
+    /** iPhone jaisa vertical pill volume bar: safed fill neeche se upar, neeche speaker icon. */
     private inner class VolumeBarView(c: Context) : View(c) {
-        private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(220, 30, 30, 30) }
-        private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#1E88E5") }
-        private val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            textSize = dp(14).toFloat()
-            textAlign = Paint.Align.CENTER
+        private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(175, 58, 58, 62) }
+        private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(245, 255, 255, 255) }
+        private val iconFill = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val iconStroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
         }
+        private val clip = Path()
+        private val body = Path()
+        private val arcRect = RectF()
 
         private fun fraction(): Float {
             val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
@@ -139,15 +142,52 @@ class VolumeOverlayService : Service() {
             val w = width.toFloat()
             val h = height.toFloat()
             val r = w / 2f
+            val f = fraction()
+
             canvas.drawRoundRect(0f, 0f, w, h, r, r, track)
-            val top = h - h * fraction()
             canvas.save()
-            val clip = Path().apply { addRoundRect(RectF(0f, 0f, w, h), r, r, Path.Direction.CW) }
+            clip.reset()
+            clip.addRoundRect(RectF(0f, 0f, w, h), r, r, Path.Direction.CW)
             canvas.clipPath(clip)
+            val top = h - h * f
             canvas.drawRect(0f, top, w, h, fill)
             canvas.restore()
-            val cur = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
-            canvas.drawText(cur.toString(), w / 2f, h - dp(12).toFloat(), label)
+
+            // Speaker icon (24x24 grid), neeche center mein.
+            val u = dp(24) / 24f
+            val ox = w / 2f - dp(12)
+            val oy = h - dp(26) - dp(12)
+            val iconTop = oy
+            val color = if (top < iconTop + dp(12)) Color.rgb(58, 58, 60) else Color.WHITE
+            iconFill.color = color
+            iconStroke.color = color
+            iconStroke.strokeWidth = 1.8f * u
+
+            body.reset()
+            body.moveTo(ox + 3 * u, oy + 9 * u)
+            body.lineTo(ox + 7 * u, oy + 9 * u)
+            body.lineTo(ox + 12 * u, oy + 4 * u)
+            body.lineTo(ox + 12 * u, oy + 20 * u)
+            body.lineTo(ox + 7 * u, oy + 15 * u)
+            body.lineTo(ox + 3 * u, oy + 15 * u)
+            body.close()
+            canvas.drawPath(body, iconFill)
+
+            val waves = when {
+                f <= 0f -> 0
+                f < 0.34f -> 1
+                f < 0.67f -> 2
+                else -> 3
+            }
+            for (i in 1..waves) {
+                val rad = (3 + i * 3) * u
+                arcRect.set(ox + 12 * u - rad, oy + 12 * u - rad, ox + 12 * u + rad, oy + 12 * u + rad)
+                canvas.drawArc(arcRect, -40f, 80f, false, iconStroke)
+            }
+            if (waves == 0) {
+                canvas.drawLine(ox + 15 * u, oy + 9 * u, ox + 20 * u, oy + 15 * u, iconStroke)
+                canvas.drawLine(ox + 20 * u, oy + 9 * u, ox + 15 * u, oy + 15 * u, iconStroke)
+            }
         }
 
         override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -189,7 +229,7 @@ class VolumeOverlayService : Service() {
         }
         val bar = VolumeBarView(this).apply {
             visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(dp(BUTTON_DP), dp(BAR_DP)).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(BAR_W_DP), dp(BAR_DP)).apply {
                 topMargin = dp(8)
             }
         }
@@ -289,7 +329,7 @@ class VolumeOverlayService : Service() {
     private fun clamp(lp: WindowManager.LayoutParams) {
         val dm = resources.displayMetrics
         val h = if (expanded) dp(BUTTON_DP + 8 + BAR_DP) else dp(BUTTON_DP)
-        val maxX = (dm.widthPixels - dp(BUTTON_DP)).coerceAtLeast(0)
+        val maxX = (dm.widthPixels - dp(BAR_W_DP)).coerceAtLeast(0)
         val maxY = (dm.heightPixels - h).coerceAtLeast(0)
         lp.x = lp.x.coerceIn(0, maxX)
         lp.y = lp.y.coerceIn(0, maxY)
@@ -339,6 +379,7 @@ class VolumeOverlayService : Service() {
         private const val NOTIF_ID = 1001
         private const val AUTO_HIDE_MS = 3000L
         private const val BUTTON_DP = 56
-        private const val BAR_DP = 220
+        private const val BAR_DP = 200
+        private const val BAR_W_DP = 64
     }
 }
