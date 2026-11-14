@@ -299,8 +299,13 @@ class VolumeOverlayService : Service() {
 
     private fun startAsForeground() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        // Purana channel hata do: channel ki lockscreen setting install ke baad badalti nahi.
+        nm.deleteNotificationChannel("volume_overlay")
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, "Volume button", NotificationManager.IMPORTANCE_LOW)
+            NotificationChannel(CHANNEL_ID, "Volume button", NotificationManager.IMPORTANCE_LOW).apply {
+                lockscreenVisibility = Notification.VISIBILITY_SECRET
+                setShowBadge(false)
+            }
         )
         val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         val stopIntent = PendingIntent.getService(
@@ -318,6 +323,7 @@ class VolumeOverlayService : Service() {
             .setContentIntent(openIntent)
             .addAction(Notification.Action.Builder(0, "Stop", stopIntent).build())
             .setOngoing(true)
+            .setVisibility(Notification.VISIBILITY_SECRET)
             .build()
 
         if (Build.VERSION.SDK_INT >= 34) {
@@ -329,7 +335,7 @@ class VolumeOverlayService : Service() {
 
     companion object {
         const val ACTION_STOP = "com.sahil.volumebutton.ACTION_STOP"
-        private const val CHANNEL_ID = "volume_overlay"
+        private const val CHANNEL_ID = "volume_overlay_v2"
         private const val NOTIF_ID = 1001
         private const val AUTO_HIDE_MS = 3000L
         private const val BUTTON_DP = 56
