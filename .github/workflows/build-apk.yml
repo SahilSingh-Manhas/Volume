@@ -25,8 +25,16 @@ jobs:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
+          SIGNED=no
           if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "$KEYSTORE_B64" | tr -d ' \r\n\t' | base64 -d > "$RUNNER_TEMP/release.jks" || echo "::warning::KEYSTORE_B64 valid base64 nahi hai (paste adhura/galat)"
+            if keytool -list -keystore "$RUNNER_TEMP/release.jks" -alias volume -storepass "$KEYSTORE_PASSWORD" > /dev/null 2>&1; then
+              SIGNED=yes
+            else
+              echo "::warning::Keystore padh nahi paya: KEYSTORE_B64 adhura ya KEYSTORE_PASSWORD galat. Debug APK bana raha hoon."
+            fi
+          fi
+          if [ "$SIGNED" = yes ]; then
             export KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
             gradle assembleRelease --no-daemon --stacktrace
             cp app/build/outputs/apk/release/app-release.apk "VolumeButton-v1.0.${{ github.run_number }}.apk"
