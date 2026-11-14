@@ -1,9 +1,12 @@
-name: Build APK
+name: Build APK and Release
 
 on:
   push:
     branches: [main, master]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -19,7 +22,18 @@ jobs:
           gradle-version: 8.7
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon --stacktrace
+      - name: Name the APK by version
+        run: cp app/build/outputs/apk/debug/app-debug.apk "VolumeButton-v1.0.${{ github.run_number }}.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: VolumeButton-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: VolumeButton-v1.0.${{ github.run_number }}.apk
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v1.0.${{ github.run_number }}" \
+            "VolumeButton-v1.0.${{ github.run_number }}.apk" \
+            --target "${{ github.sha }}" \
+            --title "Volume Button v1.0.${{ github.run_number }}" \
+            --notes "Auto-built APK. Download the .apk below and install it."
