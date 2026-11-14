@@ -1,7 +1,8 @@
 # Volume Button
 
-Always-on-screen floating **+ / −** volume buttons (Kotlin, zero third-party dependencies, no internet permission).
+Always-on-screen round floating button (Kotlin, zero third-party dependencies, no internet permission).
 
-- Handle (☰) pakad ke panel drag karo; + / − daba ke rakho to tez repeat.
+- Button tap karo → volume bar khulta hai; upar swipe = volume zyada, niche = kam. 3 sec baad bar band.
+- Button pakad ke kheencho to kahin bhi move karo.
 - Phone restart ke baad auto-start (agar on tha). Notification se Stop.
 - APK: GitHub → Actions → "Build APK" → artifact `VolumeButton-debug-apk`.
