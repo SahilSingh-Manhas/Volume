@@ -15,9 +15,26 @@ android {
         versionName = "1.0"
     }
 
+    // Fixed release key (GitHub secrets se). Isse har version same signature se banta hai,
+    // to naya APK purane ke upar install ho jata hai.
+    val keystorePath: String? = System.getenv("KEYSTORE_PATH")
+    if (keystorePath != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = "volume"
+                keyPassword = System.getenv("KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (keystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {
